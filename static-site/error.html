@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Error</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 50px;
+        }
+        .error-message {
+            color: red;
+            font-size: 1.5em;
+        }
+    </style>
+</head>
+<body>
+    <h1>Error Occurred</h1>
+    <p class="error-message" id="error"></p>
+    <script>
+        // Function to get query string parameters
+        function getQueryParam(param) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(param);
+        }
+
+        // Read error message from the query string
+        const errorMessage = getQueryParam('error');
+        
+        if (errorMessage) {
+            // Display the error message if present
+            document.getElementById('error').textContent = decodeURIComponent(errorMessage);
+        } else {
+            document.getElementById('error').textContent = "An unknown error occurred.";
+        }
+    </script>
+</body>
+</html>
