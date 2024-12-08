@@ -22,7 +22,7 @@ if (tenant && customer_guid) {
         .then(function (response) {
             // Parse the response to extract the lifetime value
             if (response.data && response.data.lifetimeValue !== undefined) {
-                $("#response").text(`Life Time Value = ${response.data.lifetimeValue}`).addClass('success');
+                $("#response").text(`Lifetime Value = ${response.data.lifetimeValue}`).addClass('success');
             } else {
                 $("#response").text("No lifetime value found in the response.").addClass('error');
             }
