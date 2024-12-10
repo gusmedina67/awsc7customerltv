@@ -13,11 +13,16 @@ var App = window.App || {};
         }
 
         // Read tenant and customer_guid from the query string
-        var tenant = getQueryParam('tenant');
-        var customer_guid = getQueryParam('customer_guid');
+        var tenant = getQueryParam('tenantid');
+        var customer_guid = getQueryParam('customerid');
 
         if (!tenant || !customer_guid) {
-            $("#response")
+            tenant = getQueryParam('tenantId');
+            customer_guid = getQueryParam('customerId');
+        }
+
+        if (!tenant || !customer_guid) {
+            $(".header-label")
                 .text("Error: Missing tenant or customer_guid in query string.")
                 .addClass('error');
             return;
@@ -34,15 +39,24 @@ var App = window.App || {};
             .then(function (response) {
                 // Parse and display the response
                 if (response.data && response.data.lifetimeValue !== undefined) {
-                    $("#response")
-                        .text(`Lifetime Value = ${response.data.lifetimeValue}`)
-                        .removeClass('error')
-                        .addClass('success');
+                    const lifetimeValueInCents = response.data.lifetimeValue;
+
+                    // Convert cents to dollars by dividing by 100
+                    const lifetimeValueInDollars = lifetimeValueInCents / 100;
+
+                    // Format the lifetime value as USD currency
+                    const formattedValue = new Intl.NumberFormat('en-US', {
+                        style: 'currency',
+                        currency: 'USD'
+                    }).format(lifetimeValueInDollars);
+
+                    $(".status-div")
+                        .text(formattedValue)
+                        .removeClass('error');
                 } else {
-                    $("#response")
-                        .text("No lifetime value found in the response.")
-                        .removeClass('success')
-                        .addClass('error');
+                    $(".status-div")
+                        .text("$0.00")
+                        .removeClass('success');
                 }
             })
             .catch(function (error) {
@@ -65,7 +79,7 @@ var App = window.App || {};
                     errorMessage = `Error: ${error}`;
                 }
 
-                $("#response")
+                $(".header-label")
                     .text(errorMessage)
                     .removeClass('success')
                     .addClass('error');

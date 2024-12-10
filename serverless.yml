@@ -27,8 +27,8 @@ provider:
   memorySize: 128
 
 # you can overwrite defaults here
-  stage: dev
-  region: us-east-1
+  stage: stg
+  region: us-west-1
 
 # you can add statements to the Lambda function's IAM Role here
 #  iam:
@@ -50,8 +50,8 @@ provider:
 
 # you can define service wide environment variables here
   environment:
-    USER_ID: ams-integration
-    PASSWORD: AppD3v@Gsati!
+    USER_ID: customerltv
+    PASSWORD: O133ozUDuyyzjH3WxKNT0BXIJUOOqJ7yDPPOEZQfY01cKAJlbR6aouuRKEHk8xPa
 
 # you can add packaging information here
 #package:
@@ -119,9 +119,9 @@ plugins:
 
 custom:
   s3Sync:
-    - bucketName: awsc7customerltv-bucket
+    - bucketName: awsc7customerltv-bucket-stg
       localDir: static-site # Local directory containing your static files
-      region: us-east-1
+      region: us-west-1
 
 # you can add CloudFormation resource templates here
 resources:
@@ -129,7 +129,7 @@ resources:
     StaticWebsiteBucket:
       Type: AWS::S3::Bucket
       Properties:
-        BucketName: awsc7customerltv-bucket
+        BucketName: awsc7customerltv-bucket-stg
         WebsiteConfiguration:
           IndexDocument: index.html
           ErrorDocument: error.html
