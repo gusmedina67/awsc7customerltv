@@ -37,26 +37,37 @@ var App = window.App || {};
         // Make the API call
         apiClient.postsGetTenantCustomerGuidGet(pathParams, null, {})
             .then(function (response) {
-                // Parse and display the response
-                if (response.data && response.data.lifetimeValue !== undefined) {
-                    const lifetimeValueInCents = response.data.lifetimeValue;
+                // Check if the response has data and a title
+                if (response.data) {
+                    // Set the header title based on the Lambda function response
+                    const title = response.data.title || "Lifetime Value"; // Fallback to "Lifetime Value" if title is not provided
+                    $(".header-label").text(title).removeClass('error');
 
-                    // Convert cents to dollars by dividing by 100
-                    const lifetimeValueInDollars = lifetimeValueInCents / 100;
+                    // Parse and display the response for lifetime value
+                    if (response.data.lifetimeValue !== undefined) {
+                        const lifetimeValueInCents = response.data.lifetimeValue;
 
-                    // Format the lifetime value as USD currency
-                    const formattedValue = new Intl.NumberFormat('en-US', {
-                        style: 'currency',
-                        currency: 'USD'
-                    }).format(lifetimeValueInDollars);
+                        // Convert cents to dollars by dividing by 100
+                        const lifetimeValueInDollars = lifetimeValueInCents / 100;
 
-                    $(".status-div")
-                        .text(formattedValue)
-                        .removeClass('error');
+                        // Format the lifetime value as USD currency
+                        const formattedValue = new Intl.NumberFormat('en-US', {
+                            style: 'currency',
+                            currency: 'USD'
+                        }).format(lifetimeValueInDollars);
+
+                        $(".status-div")
+                            .text(formattedValue)
+                            .removeClass('error');
+                    } else {
+                        $(".status-div")
+                            .text("$0.00")
+                            .removeClass('success');
+                    }
                 } else {
-                    $(".status-div")
-                        .text("$0.00")
-                        .removeClass('success');
+                    $(".header-label")
+                        .text("Error: No response data.")
+                        .addClass('error');
                 }
             })
             .catch(function (error) {

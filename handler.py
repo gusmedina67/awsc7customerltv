@@ -2,6 +2,8 @@ import json
 import urllib3
 import base64
 import os
+import boto3
+from botocore.exceptions import ClientError
 
 def lambda_handler_get(event, context):
     try:
@@ -21,7 +23,38 @@ def lambda_handler_get(event, context):
         if not user_id or not password:
             raise ValueError("Environment variables USER_ID and PASSWORD must be set.")
 
-        # Construct the URL
+        # Initialize DynamoDB client
+        dynamodb = boto3.client('dynamodb')
+
+        # Fetch 'LTV_TITLE' setting from DynamoDB
+        try:
+            ltv_title_response = dynamodb.get_item(
+                TableName='SystemSettings',
+                Key={
+                    'SettingKey': {'S': 'LTV_TITLE'},
+                    'Tenant': {'S': tenant}
+                }
+            )
+            ltv_title_value = ltv_title_response.get('Item', {}).get('SettingValue', {}).get('S', 'Default Title')
+        except ClientError as e:
+            raise ValueError(f"Error fetching 'LTV_TITLE' from DynamoDB: {str(e)}")
+
+        # Fetch 'LTV_PERCENTAGE' setting from DynamoDB
+        try:
+            ltv_percentage_response = dynamodb.get_item(
+                TableName='SystemSettings',
+                Key={
+                    'SettingKey': {'S': 'LTV_PERCENTAGE'},
+                    'Tenant': {'S': tenant}
+                }
+            )
+            ltv_percentage_value = ltv_percentage_response.get('Item', {}).get('SettingValue', {}).get('N', '0')
+            # print("LTV Percentage Response:", ltv_percentage_response)
+            ltv_percentage = float(ltv_percentage_value) / 100  # Convert to percentage
+        except ClientError as e:
+            raise ValueError(f"Error fetching 'LTV_PERCENTAGE' from DynamoDB: {str(e)}")
+
+        # Construct the URL for the external API
         url = f"https://api.commerce7.com/v1/customer/{customer_guid}"
 
         # Encode credentials for Basic Authentication
@@ -54,10 +87,14 @@ def lambda_handler_get(event, context):
         order_count = order_info.get('orderCount', 0)
         lifetime_value = order_info.get('lifetimeValue', 0)
 
-        # Check if orderCount > 0 and get lifetimeValue
+        # Apply the percentage calculation
+        adjusted_lifetime_value = lifetime_value * ltv_percentage
+
+        # Check if orderCount > 0 and include additional information
         if order_count > 0:
             result = {
-                "lifetimeValue": lifetime_value
+                "title": ltv_title_value,
+                "lifetimeValue": adjusted_lifetime_value
             }
         else:
             result = {

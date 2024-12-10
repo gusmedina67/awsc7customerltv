@@ -52,6 +52,14 @@ provider:
   environment:
     USER_ID: customerltv
     PASSWORD: O133ozUDuyyzjH3WxKNT0BXIJUOOqJ7yDPPOEZQfY01cKAJlbR6aouuRKEHk8xPa
+  iam:
+    role:
+      statements:
+        - Effect: "Allow"
+          Action:
+            - "dynamodb:GetItem"
+          Resource:
+            - "arn:aws:dynamodb:us-west-1:655957386383:table/SystemSettings"
 
 # you can add packaging information here
 #package:
@@ -154,3 +162,24 @@ resources:
                 - - "arn:aws:s3:::"
                   - !Ref StaticWebsiteBucket
                   - "/*"
+    # DynamoDB Table for SystemSettings
+    SystemSettingsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: SystemSettings
+        AttributeDefinitions:
+          - AttributeName: SettingKey
+            AttributeType: S
+          - AttributeName: Tenant
+            AttributeType: S
+        KeySchema:
+          - AttributeName: SettingKey
+            KeyType: HASH # Primary Key
+          - AttributeName: Tenant
+            KeyType: RANGE # Sort Key
+        BillingMode: PROVISIONED # Provisioned throughput mode
+        ProvisionedThroughput: # Minimal configuration for cost-effectiveness
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        SSESpecification: # Enable server-side encryption
+          SSEEnabled: true
