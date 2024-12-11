@@ -30,6 +30,33 @@ def lambda_handler_get(event, context):
         # Initialize DynamoDB client
         dynamodb_client = boto3.client('dynamodb')
 
+        # Fetch 'LTV_USER_ACTIVE' setting from DynamoDB
+        try:
+            ltv_user_active_response = dynamodb_client.get_item(
+                TableName='SystemSettings',
+                Key={
+                    'SettingKey': {'S': 'LTV_USER_ACTIVE'},
+                    'Tenant': {'S': tenant}
+                }
+            )
+            ltv_user_active_value = ltv_user_active_response.get('Item', {}).get('SettingValue', {}).get('BOOL', False)
+        except ClientError as e:
+            raise ValueError(f"Error fetching 'LTV_USER_ACTIVE' from DynamoDB: {str(e)}")
+
+        # Check if LTV_USER_ACTIVE is True
+        if not ltv_user_active_value:
+            return {
+                "statusCode": 400,
+                "headers": {
+                    "Access-Control-Allow-Origin": "*",
+                    "Access-Control-Allow-Headers": "Content-Type",
+                    "Access-Control-Allow-Methods": "OPTIONS,GET"
+                },
+                "body": json.dumps({
+                    "message": "APP is not installed on the provided tenant."
+                }),
+            }
+
         # Fetch 'LTV_TITLE' setting from DynamoDB
         try:
             ltv_title_response = dynamodb_client.get_item(
@@ -183,7 +210,8 @@ def lambda_handler_activate(event, context):
             {"SettingKey": "LTV_PERCENTAGE", "Tenant": tenant_id, "SettingValue": Decimal(str(percentage))},
             {"SettingKey": "LTV_USER", "Tenant": tenant_id, "SettingValue": user},
             {"SettingKey": "LTV_USER_ACTIVE", "Tenant": tenant_id, "SettingValue": True},
-            {"SettingKey": "LTV_ACTIVATION_TIMESTAMP", "Tenant": tenant_id, "SettingValue": Decimal(current_timestamp)}        
+            {"SettingKey": "LTV_ACTIVATION_TIMESTAMP", "Tenant": tenant_id, "SettingValue": Decimal(current_timestamp)},
+            {"SettingKey": "LTV_LAST_UPDATED_TIMESTAMP", "Tenant": tenant_id, "SettingValue": Decimal(current_timestamp)}        
         ]
 
         with table.batch_writer() as batch:
@@ -221,9 +249,9 @@ def lambda_handler_deactivate(event, context):
         table_name = 'SystemSettings'
         table = dynamodb.Table(table_name)
 
-        # Add new entry for LTV_DEACTIVATION_TIMESTAMP
+        # Add new entry for LTV_LAST_UPDATED_TIMESTAMP
         items = [
-            {"SettingKey": "LTV_DEACTIVATION_TIMESTAMP", "Tenant": tenant_id, "SettingValue": Decimal(current_timestamp)},
+            {"SettingKey": "LTV_LAST_UPDATED_TIMESTAMP", "Tenant": tenant_id, "SettingValue": Decimal(current_timestamp)},
             {"SettingKey": "LTV_USER_ACTIVE", "Tenant": tenant_id, "SettingValue": False}
         ]
 
