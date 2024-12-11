@@ -58,6 +58,8 @@ provider:
         - Effect: "Allow"
           Action:
             - "dynamodb:GetItem"
+            - "dynamodb:PutItem"
+            - "dynamodb:BatchWriteItem"
           Resource:
             - "arn:aws:dynamodb:us-west-1:655957386383:table/SystemSettings"
 
@@ -81,6 +83,22 @@ functions:
               paths:
                 tenant: true
                 customer_guid: true
+          cors: true
+
+  activate:
+    handler: handler.lambda_handler_activate
+    events:
+      - http:
+          path: posts/activate
+          method: post
+          cors: true
+
+  deactivate:
+    handler: handler.lambda_handler_deactivate
+    events:
+      - http:
+          path: posts/deactivate
+          method: post
           cors: true
 #    The following are a few example events you can configure
 #    NOTE: Please make sure to change your handler code to work with those events

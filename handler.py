@@ -2,8 +2,12 @@ import json
 import urllib3
 import base64
 import os
+import time
 import boto3
 from botocore.exceptions import ClientError
+from decimal import Decimal
+
+dynamodb = boto3.resource('dynamodb')
 
 def lambda_handler_get(event, context):
     try:
@@ -24,11 +28,11 @@ def lambda_handler_get(event, context):
             raise ValueError("Environment variables USER_ID and PASSWORD must be set.")
 
         # Initialize DynamoDB client
-        dynamodb = boto3.client('dynamodb')
+        dynamodb_client = boto3.client('dynamodb')
 
         # Fetch 'LTV_TITLE' setting from DynamoDB
         try:
-            ltv_title_response = dynamodb.get_item(
+            ltv_title_response = dynamodb_client.get_item(
                 TableName='SystemSettings',
                 Key={
                     'SettingKey': {'S': 'LTV_TITLE'},
@@ -41,7 +45,7 @@ def lambda_handler_get(event, context):
 
         # Fetch 'LTV_PERCENTAGE' setting from DynamoDB
         try:
-            ltv_percentage_response = dynamodb.get_item(
+            ltv_percentage_response = dynamodb_client.get_item(
                 TableName='SystemSettings',
                 Key={
                     'SettingKey': {'S': 'LTV_PERCENTAGE'},
@@ -150,3 +154,91 @@ def lambda_handler_get(event, context):
                 "error": str(e),
             }),
         }
+
+def lambda_handler_activate(event, context):
+    try:
+        body = event.get('body')
+        if isinstance(body, str):
+            body = json.loads(body)
+
+        percentage = body.get('percentage')
+        title = body.get('title')
+        tenant_id = body.get('tenantId')
+        user = body.get('user')
+
+        if not all([percentage, title, tenant_id, user]):
+            return {
+                "statusCode": 400,
+                "body": json.dumps({"message": "Invalid input: percentage, title, tenantId, and user are required."})
+            }
+
+        # Get current timestamp in epoch format (seconds since Unix epoch)
+        current_timestamp = int(time.time())  # Epoch time in seconds
+
+        table_name = 'SystemSettings'
+        table = dynamodb.Table(table_name)
+        
+        items = [
+            {"SettingKey": "LTV_TITLE", "Tenant": tenant_id, "SettingValue": title},
+            {"SettingKey": "LTV_PERCENTAGE", "Tenant": tenant_id, "SettingValue": Decimal(str(percentage))},
+            {"SettingKey": "LTV_USER", "Tenant": tenant_id, "SettingValue": user},
+            {"SettingKey": "LTV_USER_ACTIVE", "Tenant": tenant_id, "SettingValue": True},
+            {"SettingKey": "LTV_ACTIVATION_TIMESTAMP", "Tenant": tenant_id, "SettingValue": Decimal(current_timestamp)}        
+        ]
+
+        with table.batch_writer() as batch:
+            for item in items:
+                batch.put_item(Item=item)
+
+        return {
+            "statusCode": 200,
+            "body": json.dumps({"message": "Items successfully inserted."})
+        }
+    except Exception as e:
+        print("Error inserting items:", e)
+        return {
+            "statusCode": 500,
+            "body": json.dumps({"message": "Internal Server Error", "error": str(e)})
+        }
+
+def lambda_handler_deactivate(event, context):
+    try:
+        body = event.get('body')
+        if isinstance(body, str):
+            body = json.loads(body)
+
+        tenant_id = body.get('tenantId')
+
+        if not tenant_id:
+            return {
+                "statusCode": 400,
+                "body": json.dumps({"message": "Invalid input: tenantId is required."})
+            }
+
+        # Get current timestamp in epoch format
+        current_timestamp = int(time.time())  # Epoch time in seconds
+
+        table_name = 'SystemSettings'
+        table = dynamodb.Table(table_name)
+
+        # Add new entry for LTV_DEACTIVATION_TIMESTAMP
+        items = [
+            {"SettingKey": "LTV_DEACTIVATION_TIMESTAMP", "Tenant": tenant_id, "SettingValue": Decimal(current_timestamp)},
+            {"SettingKey": "LTV_USER_ACTIVE", "Tenant": tenant_id, "SettingValue": False}
+        ]
+
+        with table.batch_writer() as batch:
+            for item in items:
+                batch.put_item(Item=item)
+
+        return {
+            "statusCode": 200,
+            "body": json.dumps({"message": "Deactivation successful."})
+        }
+    except Exception as e:
+        print("Error deactivating:", e)
+        return {
+            "statusCode": 500,
+            "body": json.dumps({"message": "Internal Server Error", "error": str(e)})
+        }
+        
