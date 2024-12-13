@@ -43,6 +43,10 @@ var App = window.App || {};
                     const title = response.data.title || "Lifetime Value"; // Fallback to "Lifetime Value" if title is not provided
                     $(".header-label").text(title).removeClass('error');
 
+                    const description = response.data.description || ""; // Fallback to "Lifetime Value" if title is not provided
+                    if (description != "")
+                        $(".description-div").html(description);
+
                     // Parse and display the response for lifetime value
                     if (response.data.lifetimeValue !== undefined) {
                         const lifetimeValueInCents = response.data.lifetimeValue;

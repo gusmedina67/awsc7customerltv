@@ -84,6 +84,19 @@ def lambda_handler_get(event, context):
             ltv_percentage = float(ltv_percentage_value) / 100  # Convert to percentage
         except ClientError as e:
             raise ValueError(f"Error fetching 'LTV_PERCENTAGE' from DynamoDB: {str(e)}")
+        
+        # Fetch 'LTV_DESCRIPTION' setting from DynamoDB
+        try:
+            ltv_description_response = dynamodb_client.get_item(
+                TableName='SystemSettings',
+                Key={
+                    'SettingKey': {'S': 'LTV_DESCRIPTION'},
+                    'Tenant': {'S': tenant}
+                }
+            )
+            ltv_description_value = ltv_description_response.get('Item', {}).get('SettingValue', {}).get('S', 'No description available.')
+        except ClientError as e:
+            raise ValueError(f"Error fetching 'LTV_DESCRIPTION' from DynamoDB: {str(e)}")
 
         # Construct the URL for the external API
         url = f"https://api.commerce7.com/v1/customer/{customer_guid}"
@@ -125,6 +138,7 @@ def lambda_handler_get(event, context):
         if order_count > 0:
             result = {
                 "title": ltv_title_value,
+                "description": ltv_description_value,
                 "lifetimeValue": adjusted_lifetime_value
             }
         else:
@@ -192,6 +206,7 @@ def lambda_handler_activate(event, context):
         title = body.get('title')
         tenant_id = body.get('tenantId')
         user = body.get('user')
+        description = body.get('description')
 
         if not all([percentage, title, tenant_id, user]):
             return {
@@ -211,7 +226,8 @@ def lambda_handler_activate(event, context):
             {"SettingKey": "LTV_USER", "Tenant": tenant_id, "SettingValue": user},
             {"SettingKey": "LTV_USER_ACTIVE", "Tenant": tenant_id, "SettingValue": True},
             {"SettingKey": "LTV_ACTIVATION_TIMESTAMP", "Tenant": tenant_id, "SettingValue": Decimal(current_timestamp)},
-            {"SettingKey": "LTV_LAST_UPDATED_TIMESTAMP", "Tenant": tenant_id, "SettingValue": Decimal(current_timestamp)}        
+            {"SettingKey": "LTV_LAST_UPDATED_TIMESTAMP", "Tenant": tenant_id, "SettingValue": Decimal(current_timestamp)},
+            {"SettingKey": "LTV_DESCRIPTION", "Tenant": tenant_id, "SettingValue": description}        
         ]
 
         with table.batch_writer() as batch:
